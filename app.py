@@ -1,5 +1,6 @@
 import os
 from flask import Flask, send_from_directory, render_template, session, redirect, url_for
+from flask_talisman import Talisman
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from models import db
@@ -28,6 +29,13 @@ def create_app():
 
     # Session config (server-side)
     app.config["SESSION_TYPE"] = "filesystem"
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SECURE"] = False  # Set to True if using HTTPS
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+    # Init Talisman (Security Headers)
+    # We allow inline scripts/styles for this CTF environment, but enforce other headers
+    Talisman(app, content_security_policy=None, force_https=False)
 
     # Init DB
     db.init_app(app)
@@ -107,4 +115,5 @@ app = create_app()
 
 if __name__ == "__main__":
     os.makedirs(cfg.UPLOAD_FOLDER, exist_ok=True)
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    # debug=False for production readiness
+    app.run(debug=False, host="0.0.0.0", port=5000)

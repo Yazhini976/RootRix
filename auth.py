@@ -33,14 +33,7 @@ def admin_required(f):
 
 
 def check_password(stored: str, provided: str) -> bool:
-    """
-    Supports both bcrypt hashes (starts with $2b$) and
-    plain-text passwords (legacy / before migration).
-    """
-    if stored.startswith("$2b$") or stored.startswith("$2a$"):
-        return bcrypt.checkpw(provided.encode(), stored.encode())
-    # Plain-text fallback (pre-migration)
-    return stored == provided
+    return bcrypt.checkpw(provided.encode(), stored.encode())
 
 
 @auth_bp.route("/login", methods=["POST"])
