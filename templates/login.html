@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login – RootrixCTF</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body>
+  <div class="login-page">
+    <div class="login-box fade-in">
+      <div class="login-logo">
+        <img src="/static/logo.svg" alt="Logo"
+          style="width:80px;height:80px;display:block;margin:0 auto 0.5rem;filter:drop-shadow(0 0 16px #00d4ff);">
+        <h1>ROOTRIX CTF</h1>
+        <p>CAPTURE THE FLAG PLATFORM</p>
+      </div>
+
+      <div class="glass-card">
+        <div id="login-alert" class="hidden"></div>
+
+        <div class="form-group">
+          <label class="form-label" for="username">Username</label>
+          <input class="form-control" id="username" type="text" placeholder="Enter your username"
+            autocomplete="username" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input class="form-control" id="password" type="password" placeholder="Enter your password"
+            autocomplete="current-password" />
+        </div>
+
+        <button class="btn btn-primary" id="login-btn"
+          style="width:100%; justify-content:center; padding: 0.9rem; font-size:1rem; margin-top:0.5rem;">
+          <span id="login-text">LOGIN</span>
+          <span id="login-spinner" class="spinner hidden"></span>
+        </button>
+
+        <p
+          style="text-align:center; margin-top:1.2rem; font-size:0.8rem; color:var(--text-muted); font-family:var(--font-mono);">
+          &gt;&gt; AUTHORIZED ACCESS ONLY &lt;&lt;
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const loginBtn = document.getElementById("login-btn");
+    const alertDiv = document.getElementById("login-alert");
+
+    function showAlert(msg, type) {
+      alertDiv.className = `alert alert-${type}`;
+      alertDiv.textContent = msg;
+      alertDiv.classList.remove("hidden");
+    }
+
+    function setLoading(v) {
+      document.getElementById("login-text").classList.toggle("hidden", v);
+      document.getElementById("login-spinner").classList.toggle("hidden", !v);
+      loginBtn.disabled = v;
+    }
+
+    loginBtn.addEventListener("click", async () => {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+      if (!username || !password) { showAlert("Please enter username and password.", "error"); return; }
+
+      setLoading(true);
+      try {
+        const res = await API.login({ username, password });
+        if (res.error) { showAlert(res.error, "error"); return; }
+        if (res.role === "admin") {
+          window.location.href = "/admin";
+        } else {
+          window.location.href = "/dashboard";
+        }
+      } catch (e) {
+        showAlert("Login failed. Please try again.", "error");
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    // Enter key support
+    ["username", "password"].forEach(id => {
+      document.getElementById(id).addEventListener("keydown", e => {
+        if (e.key === "Enter") loginBtn.click();
+      });
+    });
+  </script>
+</body>
+
+</html>

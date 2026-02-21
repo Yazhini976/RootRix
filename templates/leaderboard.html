@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Leaderboard – RootrixCTF</title>
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a class="navbar-brand" href="javascript:history.back()">
+            <img src="/static/logo.svg" alt="Logo" style="width:36px;height:36px;filter:drop-shadow(0 0 8px #00d4ff);">
+            <span>
+                <span class="logo-text">ROOTRIX CTF</span>
+                <span class="logo-sub">LEADERBOARD</span>
+            </span>
+        </a>
+        <div class="navbar-right">
+            <div class="nav-user">
+                <span>👤 {{ username }}</span>
+                <span class="role-badge"
+                    style="border-color:{% if role == 'admin' %}var(--accent-cyan){% else %}var(--accent-green){% endif %};color:{% if role == 'admin' %}var(--accent-cyan){% else %}var(--accent-green){% endif %};">{{
+                    role | upper }}</span>
+            </div>
+            <div class="nav-links">
+                {% if role == 'admin' %}
+                <a class="nav-link" href="/admin">🛠️ Admin</a>
+                {% else %}
+                <a class="nav-link" href="/dashboard">🏁 Dashboard</a>
+                {% endif %}
+                <button class="btn btn-logout" id="logout-btn">⏻ Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="padding-top:2rem;">
+
+        <!-- HEADER -->
+        <div class="page-header">
+            <div style="display:flex;align-items:center;gap:1rem;margin-bottom:0.5rem;">
+                <span style="font-size:2.5rem;filter:drop-shadow(0 0 12px var(--accent-yellow));">🏆</span>
+                <h1
+                    style="font-family:var(--font-display);font-size:2rem;color:var(--accent-yellow);letter-spacing:3px;text-shadow:0 0 20px rgba(255,215,0,0.3);">
+                    LEADERBOARD</h1>
+            </div>
+            <p>Live rankings updated in real time</p>
+            <div style="margin-top:0.8rem;display:flex;align-items:center;gap:0.5rem;">
+                <span style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text-muted);">Auto-refresh
+                    in:</span>
+                <span id="refresh-timer"
+                    style="font-family:var(--font-mono);font-size:0.8rem;color:var(--accent-green);">30s</span>
+                <button class="btn btn-secondary btn-sm" onclick="loadLeaderboard()">🔄 Refresh Now</button>
+            </div>
+        </div>
+
+        <!-- TOP 3 PODIUM -->
+        <div id="podium" style="display:flex;justify-content:center;gap:1.5rem;margin-bottom:2.5rem;flex-wrap:wrap;">
+        </div>
+
+        <!-- FULL TABLE -->
+        <div id="lb-container">
+            <div class="empty-state">
+                <div class="spinner" style="width:40px;height:40px;margin:auto;margin-bottom:1rem;"></div>
+                <p>Loading leaderboard…</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        setupLogout();
+
+        let countdown = 30;
+        let timerInterval;
+
+        async function loadLeaderboard() {
+            const container = document.getElementById("lb-container");
+            const podiumEl = document.getElementById("podium");
+            try {
+                const resp = await fetch("/leaderboard");
+                // 403 = admin has hidden the leaderboard
+                if (resp.status === 403) {
+                    const data = await resp.json();
+                    podiumEl.style.display = "none";
+                    container.innerHTML = `
+                        <div class="empty-state" style="padding:3rem;">
+                            <div style="font-size:4rem;margin-bottom:1rem;filter:drop-shadow(0 0 20px var(--accent-cyan));">🔒</div>
+                            <h2 style="font-family:var(--font-display);color:var(--accent-cyan);letter-spacing:2px;margin-bottom:0.5rem;">LEADERBOARD LOCKED</h2>
+                            <p style="color:var(--text-muted);max-width:400px;margin:auto;">${data.message || 'Leaderboard is not available yet.'}</p>
+                        </div>`;
+                    return;
+                }
+                const rows = await resp.json();
+                if (!rows || rows.error) {
+                    container.innerHTML = '<div class="empty-state"><p>Failed to load leaderboard.</p></div>';
+                    return;
+                }
+
+                // Podium (top 3)
+                const medals = ['🥇', '🥈', '🥉'];
+                const podiumColors = ['var(--accent-yellow)', '#c0c0c0', '#cd7f32'];
+                const podiumSizes = ['5.5rem', '4rem', '4rem'];
+                const podiumORder = [1, 0, 2]; // silver, gold, bronze order for visual height
+                const top3 = rows.slice(0, 3);
+
+                if (top3.length > 0) {
+                    let p = "";
+                    // Render in order: 2nd, 1st, 3rd for visual podium layout
+                    const displayOrder = top3.length === 1 ? [0] : top3.length === 2 ? [1, 0] : [1, 0, 2];
+
+                    displayOrder.forEach((idx) => {
+                        if (!top3[idx]) return;
+                        const r = top3[idx];
+                        const pHeight = idx === 0 ? '130px' : idx === 1 ? '90px' : '70px';
+                        p += `<div style="text-align:center;flex:1;min-width:140px;max-width:180px;">
+            <div style="font-size:${podiumSizes[idx]};margin-bottom:0.3rem;filter:drop-shadow(0 0 10px ${podiumColors[idx]});">${medals[idx]}</div>
+            <div style="font-family:var(--font-display);font-weight:700;font-size:0.9rem;color:${podiumColors[idx]};margin-bottom:0.2rem;">${escHtml(r.username)}</div>
+            <div style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text-muted);">⭐ ${r.total_points} pts | 🎯 ${r.solved_count}</div>
+            <div style="height:${pHeight};background:linear-gradient(180deg,${podiumColors[idx]}22,transparent);border-top:2px solid ${podiumColors[idx]};margin-top:0.75rem;border-radius:6px 6px 0 0;"></div>
+          </div>`;
+                    });
+                    podiumEl.innerHTML = p;
+                    podiumEl.style.display = "flex";
+                } else {
+                    podiumEl.style.display = "none";
+                }
+
+                if (!rows.length) {
+                    container.innerHTML = '<div class="empty-state"><div class="empty-icon">🏆</div><p>No teams on the leaderboard yet.</p></div>';
+                    return;
+                }
+
+                let html = `
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Username</th>
+                <th>Challenges Solved</th>
+                <th>Total Points</th>
+              </tr>
+            </thead>
+            <tbody>`;
+                rows.forEach((r, i) => {
+                    const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+                    const medals = ['🥇', '🥈', '🥉'];
+                    const rankDisplay = i < 3 ? medals[i] : `#${i + 1}`;
+                    html += `<tr style="${i < 3 ? `background:rgba(${i === 0 ? '255,215,0' : i === 1 ? '192,192,192' : '205,127,50'},0.04);` : ''}">
+          <td><span class="leaderboard-rank ${rankClass}">${rankDisplay}</span></td>
+          <td class="lb-username">${escHtml(r.username)}</td>
+          <td class="lb-solved">🎯 ${r.solved_count}</td>
+          <td class="lb-points">⭐ ${r.total_points}</td>
+        </tr>`;
+                });
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state"><p>Error loading leaderboard.</p></div>';
+            }
+
+            // Reset countdown
+            countdown = 30;
+        }
+
+        // Auto-refresh countdown
+        function startCountdown() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                countdown--;
+                const el = document.getElementById("refresh-timer");
+                if (el) el.textContent = `${countdown}s`;
+                if (countdown <= 0) {
+                    loadLeaderboard();
+                }
+            }, 1000);
+        }
+
+        loadLeaderboard();
+        startCountdown();
+    </script>
+</body>
+
+</html>

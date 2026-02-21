@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard – RootrixCTF</title>
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a class="navbar-brand" href="/admin">
+            <img src="/static/logo.svg" alt="Logo" style="width:36px;height:36px;filter:drop-shadow(0 0 8px #00d4ff);">
+            <span>
+                <span class="logo-text">ROOTRIX CTF</span>
+                <span class="logo-sub">ADMIN PANEL</span>
+            </span>
+        </a>
+        <div class="navbar-right">
+            <div class="nav-user">
+                <span>👤 {{ username }}</span>
+                <span class="role-badge">ADMIN</span>
+            </div>
+            <div class="nav-links">
+                <a class="nav-link" href="/leaderboard">🏆 Leaderboard</a>
+                <button class="btn btn-logout" id="logout-btn">⏻ Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="padding-top:2rem;">
+
+        <!-- STATS -->
+        <div class="stats-grid" id="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-challenges">—</div>
+                <div class="stat-label">Total Challenges</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-submissions">—</div>
+                <div class="stat-label">Total Submissions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-correct">—</div>
+                <div class="stat-label">Correct Submissions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-teams">—</div>
+                <div class="stat-label">Teams on Board</div>
+            </div>
+        </div>
+
+        <!-- LEADERBOARD VISIBILITY CONTROL -->
+        <div class="card"
+            style="margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:1rem 1.5rem;">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+                <span style="font-size:1.4rem;">🏆</span>
+                <div>
+                    <div
+                        style="font-family:var(--font-display);font-size:0.85rem;letter-spacing:2px;color:var(--accent-yellow);">
+                        LEADERBOARD VISIBILITY</div>
+                    <div style="font-size:0.78rem;color:var(--text-muted);">Control when participants can see the
+                        leaderboard</div>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:1rem;">
+                <span id="lb-status-badge"
+                    style="font-family:var(--font-mono);font-size:0.8rem;padding:3px 12px;border-radius:20px;">—</span>
+                <button id="lb-toggle-btn" class="btn btn-sm" style="min-width:120px;"
+                    onclick="toggleLeaderboardVisibility()">…</button>
+            </div>
+        </div>
+
+        <!-- TABS -->
+        <div class="tabs" id="admin-tabs">
+            <button class="tab-btn active" data-tab="tab-create">➕ Create Challenge</button>
+            <button class="tab-btn" data-tab="tab-challenges">📋 Challenges</button>
+            <button class="tab-btn" data-tab="tab-submissions">📥 Submissions</button>
+            <button class="tab-btn" data-tab="tab-leaderboard">🏆 Leaderboard</button>
+        </div>
+
+        <!-- ── TAB: CREATE CHALLENGE ── -->
+        <div class="tab-panel active fade-in" id="tab-create">
+            <div class="card" style="max-width:700px;">
+                <h2
+                    style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:1.5rem;color:var(--accent-green);letter-spacing:2px;">
+                    ➕ NEW CHALLENGE
+                </h2>
+                <div id="create-alert" class="hidden"></div>
+
+                <div class="form-group">
+                    <label class="form-label">Title</label>
+                    <input class="form-control" id="ch-title" type="text" placeholder="Challenge title" />
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Category</label>
+                        <select class="form-control" id="ch-category">
+                            <option value="">– Select Category –</option>
+                            <option value="welcome">👋 Welcome</option>
+                            <option value="web">🌐 Web</option>
+                            <option value="forensic">🔬 Forensic</option>
+                            <option value="osint">🕵️ OSINT</option>
+                            <option value="steg">🖼️ Steg</option>
+                            <option value="crypto">🔐 Crypto</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Points</label>
+                        <input class="form-control" id="ch-points" type="number" placeholder="100" min="1" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" id="ch-description" placeholder="Describe the challenge…"
+                        rows="4"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Resource Type</label>
+                    <select class="form-control" id="ch-resource-type">
+                        <option value="">– None –</option>
+                        <option value="link">🔗 Website Link (Web)</option>
+                        <option value="file">📁 File / Image Upload</option>
+                    </select>
+                </div>
+
+                <div class="form-group hidden" id="link-group">
+                    <label class="form-label">Website URL</label>
+                    <input class="form-control" id="ch-link" type="url" placeholder="https://example.com" />
+                </div>
+
+                <div class="form-group hidden" id="file-group">
+                    <label class="form-label">Upload File</label>
+                    <input class="form-control" id="ch-file" type="file" accept="*/*" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Correct Flag</label>
+                    <input class="form-control" id="ch-flag" type="text" placeholder="flag{...}"
+                        style="font-family:var(--font-mono);" />
+                </div>
+
+                <button class="btn btn-primary" id="create-btn"
+                    style="width:100%;justify-content:center;padding:0.85rem;">
+                    <span id="create-text">🚀 Create Challenge</span>
+                    <span id="create-spinner" class="spinner hidden"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ── TAB: CHALLENGES ── -->
+        <div class="tab-panel" id="tab-challenges">
+            <div class="flex-between mb-2">
+                <h2
+                    style="font-family:var(--font-display);font-size:1.1rem;color:var(--accent-cyan);letter-spacing:2px;">
+                    📋 ALL CHALLENGES
+                </h2>
+                <button class="btn btn-secondary btn-sm" onclick="loadChallenges()">🔄 Refresh</button>
+            </div>
+            <div id="challenges-container">
+                <div class="empty-state">
+                    <div class="empty-icon">📋</div>
+                    <p>Loading challenges…</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── TAB: SUBMISSIONS ── -->
+        <div class="tab-panel" id="tab-submissions">
+            <div class="flex-between mb-2">
+                <h2
+                    style="font-family:var(--font-display);font-size:1.1rem;color:var(--accent-purple);letter-spacing:2px;">
+                    📥 ALL SUBMISSIONS
+                </h2>
+                <button class="btn btn-secondary btn-sm" onclick="loadSubmissions()">🔄 Refresh</button>
+            </div>
+            <div id="submissions-container">
+                <div class="empty-state">
+                    <div class="empty-icon">📥</div>
+                    <p>Loading submissions…</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── TAB: LEADERBOARD ── -->
+        <div class="tab-panel" id="tab-leaderboard">
+            <div class="flex-between mb-2">
+                <h2
+                    style="font-family:var(--font-display);font-size:1.1rem;color:var(--accent-yellow);letter-spacing:2px;">
+                    🏆 LEADERBOARD
+                </h2>
+                <button class="btn btn-secondary btn-sm" onclick="loadAdminLeaderboard()">🔄 Refresh</button>
+            </div>
+            <div id="admin-lb-container">
+                <div class="empty-state">
+                    <div class="empty-icon">🏆</div>
+                    <p>Loading leaderboard…</p>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /container -->
+
+    <script src="/static/app.js"></script>
+    <script>
+        setupLogout();
+        initTabs(document.getElementById("admin-tabs"));
+
+        // Resource type toggle
+        document.getElementById("ch-resource-type").addEventListener("change", function () {
+            const v = this.value;
+            document.getElementById("link-group").classList.toggle("hidden", v !== "link");
+            document.getElementById("file-group").classList.toggle("hidden", v !== "file");
+        });
+
+        // Tab switching → lazy load
+        document.querySelectorAll(".tab-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const t = btn.dataset.tab;
+                if (t === "tab-challenges") loadChallenges();
+                if (t === "tab-submissions") loadSubmissions();
+                if (t === "tab-leaderboard") loadAdminLeaderboard();
+            });
+        });
+
+        // ── CREATE CHALLENGE ──
+        document.getElementById("create-btn").addEventListener("click", async () => {
+            const title = document.getElementById("ch-title").value.trim();
+            const category = document.getElementById("ch-category").value;
+            const points = document.getElementById("ch-points").value || 100;
+            const description = document.getElementById("ch-description").value.trim();
+            const resourceType = document.getElementById("ch-resource-type").value;
+            const correctFlag = document.getElementById("ch-flag").value.trim();
+            const alertDiv = document.getElementById("create-alert");
+
+            function showA(msg, type) {
+                alertDiv.className = `alert alert-${type}`;
+                alertDiv.textContent = msg;
+                alertDiv.classList.remove("hidden");
+                alertDiv.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }
+
+            if (!title || !category || !correctFlag) { showA("Title, category, and flag are required.", "error"); return; }
+
+            const fd = new FormData();
+            fd.append("title", title);
+            fd.append("category", category);
+            fd.append("points", points);
+            fd.append("description", description);
+            fd.append("resource_type", resourceType);
+            fd.append("correct_flag", correctFlag);
+
+            if (resourceType === "link") {
+                fd.append("resource_link", document.getElementById("ch-link").value.trim());
+            } else if (resourceType === "file") {
+                const file = document.getElementById("ch-file").files[0];
+                if (!file) { showA("Please select a file to upload.", "error"); return; }
+                fd.append("resource_file", file);
+            }
+
+            document.getElementById("create-text").classList.add("hidden");
+            document.getElementById("create-spinner").classList.remove("hidden");
+            document.getElementById("create-btn").disabled = true;
+
+            try {
+                const res = await API.createChallenge(fd);
+                if (res.error) { showA(res.error, "error"); return; }
+                showA(`✅ Challenge "${res.challenge.title}" created successfully!`, "success");
+                // Reset form
+                ["ch-title", "ch-points", "ch-description", "ch-flag", "ch-link"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+                document.getElementById("ch-category").selectedIndex = 0;
+                document.getElementById("ch-resource-type").selectedIndex = 0;
+                document.getElementById("ch-file").value = "";
+                document.getElementById("link-group").classList.add("hidden");
+                document.getElementById("file-group").classList.add("hidden");
+                loadStats();
+            } catch (e) {
+                showA("Failed to create challenge.", "error");
+            } finally {
+                document.getElementById("create-text").classList.remove("hidden");
+                document.getElementById("create-spinner").classList.add("hidden");
+                document.getElementById("create-btn").disabled = false;
+            }
+        });
+
+        // ── LOAD CHALLENGES ──
+        async function loadChallenges() {
+            const container = document.getElementById("challenges-container");
+            container.innerHTML = '<div class="empty-state"><div class="spinner" style="width:32px;height:32px;margin:auto;"></div></div>';
+            try {
+                const challenges = await API.adminChallenges();
+                if (!challenges || challenges.error) { container.innerHTML = '<div class="empty-state"><p>Failed to load.</p></div>'; return; }
+                if (!challenges.length) { container.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>No challenges yet. Create one!</p></div>'; return; }
+
+                const categories = [...new Set(challenges.map(c => c.category))];
+                let html = "";
+                categories.forEach(cat => {
+                    const catChallenges = challenges.filter(c => c.category === cat);
+                    html += `<div style="margin-bottom:2rem;">
+          <div class="category-header">
+            <span class="category-icon">${categoryIcon(cat)}</span>
+            <span class="category-title" style="color:${categoryColor(cat)};">${cat.toUpperCase()}</span>
+            <span class="category-count">${catChallenges.length} challenge${catChallenges.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Points</th>
+                  <th>Status</th>
+                  <th>Resource</th>
+                  <th>Flag</th>
+                  <th>Solved By</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>`;
+                    catChallenges.forEach(c => {
+                        let resHtml = '—';
+                        if (c.resource_type === 'link' && c.resource_path) {
+                            resHtml = `<a href="${escHtml(c.resource_path)}" target="_blank" class="resource-link">🔗 Open</a>`;
+                        } else if (c.resource_type === 'file' && c.resource_path) {
+                            resHtml = `<a href="${escHtml(c.resource_path)}" target="_blank" class="resource-link">📁 Download</a>`;
+                        }
+                        const statusBadge = c.is_published
+                            ? `<span style="background:rgba(0,255,100,0.15);color:#00ff64;border:1px solid #00ff64;padding:2px 8px;border-radius:20px;font-size:0.72rem;font-family:var(--font-mono);font-weight:700;">⬤ LIVE</span>`
+                            : `<span style="background:rgba(255,50,50,0.13);color:#ff4444;border:1px solid #ff4444;padding:2px 8px;border-radius:20px;font-size:0.72rem;font-family:var(--font-mono);font-weight:700;">⬤ HIDDEN</span>`;
+                        const publishBtnLabel = c.is_published ? '🔒 Unpublish' : '🚀 Publish';
+                        const publishBtnStyle = c.is_published
+                            ? 'background:rgba(255,150,0,0.15);color:#ffa500;border:1px solid #ffa500;'
+                            : 'background:rgba(0,255,100,0.12);color:#00ff64;border:1px solid #00ff64;';
+                        html += `<tr>
+            <td><strong>${escHtml(c.title)}</strong><br/><span style="font-size:0.78rem;color:var(--text-muted);">${escHtml(c.description || '')}</span></td>
+            <td><span style="color:var(--accent-yellow);font-family:var(--font-mono);font-weight:700;">🏅 ${c.points}</span></td>
+            <td>${statusBadge}</td>
+            <td>${resHtml}</td>
+            <td><code style="font-family:var(--font-mono);font-size:0.8rem;color:var(--accent-yellow);word-break:break-all;">${escHtml(c.correct_flag)}</code></td>
+            <td><span style="color:var(--accent-cyan);font-family:var(--font-mono);">👥 ${c.solved_count}</span></td>
+            <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+              <button class="btn btn-sm" style="${publishBtnStyle}padding:4px 10px;font-size:0.78rem;" onclick="togglePublish(${c.id}, ${c.is_published})">${publishBtnLabel}</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteChallenge(${c.id}, '${escHtml(c.title)}')">🗑️ Delete</button>
+            </td>
+          </tr>`;
+                    });
+                    html += `</tbody></table></div></div>`;
+                });
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state"><p>Error loading challenges.</p></div>';
+            }
+        }
+
+        async function deleteChallenge(id, title) {
+            if (!confirm(`Delete challenge "${title}"? This will also remove all submissions for it.`)) return;
+            const res = await API.deleteChallenge(id);
+            if (res.message) { toast(`✅ "${title}" deleted.`, "success"); loadChallenges(); loadStats(); }
+            else toast(res.error || "Delete failed.", "error");
+        }
+
+        async function togglePublish(id, currentlyPublished) {
+            const action = currentlyPublished ? 'unpublish' : 'publish';
+            const res = await fetch(`/admin/challenges/${id}/publish`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ publish: !currentlyPublished })
+            }).then(r => r.json());
+            if (res.is_published !== undefined) {
+                toast(res.is_published ? '🚀 Challenge is now LIVE!' : '🔒 Challenge hidden from participants.', 'success');
+                loadChallenges();
+            } else {
+                toast(res.error || 'Action failed.', 'error');
+            }
+        }
+
+        // ── LOAD SUBMISSIONS ──
+        async function loadSubmissions() {
+            const container = document.getElementById("submissions-container");
+            container.innerHTML = '<div class="empty-state"><div class="spinner" style="width:32px;height:32px;margin:auto;"></div></div>';
+            try {
+                const subs = await API.adminSubmissions();
+                if (!subs || subs.error) { container.innerHTML = '<div class="empty-state"><p>Failed to load.</p></div>'; return; }
+                if (!subs.length) { container.innerHTML = '<div class="empty-state"><div class="empty-icon">📥</div><p>No submissions yet.</p></div>'; return; }
+
+                let html = '<div class="table-wrapper"><table><thead><tr><th>#</th><th>Username</th><th>Challenge</th><th>Flag Submitted</th><th>Result</th><th>Time</th></tr></thead><tbody>';
+                subs.forEach((s, i) => {
+                    const dt = new Date(s.submitted_at).toLocaleString();
+                    html += `<tr>
+          <td style="color:var(--text-muted);font-family:var(--font-mono);">${i + 1}</td>
+          <td><strong>${escHtml(s.username)}</strong></td>
+          <td>${escHtml(s.challenge_title)}</td>
+          <td><code style="font-family:var(--font-mono);font-size:0.82rem;">${escHtml(s.submitted_flag)}</code></td>
+          <td>${s.is_correct ? '<span class="badge badge-correct">✅ CORRECT</span>' : '<span class="badge badge-wrong">❌ WRONG</span>'}</td>
+          <td style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text-muted);">${dt}</td>
+        </tr>`;
+                });
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state"><p>Error loading submissions.</p></div>';
+            }
+        }
+
+        // ── LOAD ADMIN LEADERBOARD ──
+        async function loadAdminLeaderboard() {
+            const container = document.getElementById("admin-lb-container");
+            container.innerHTML = '<div class="empty-state"><div class="spinner" style="width:32px;height:32px;margin:auto;"></div></div>';
+            try {
+                const rows = await API.adminLeaderboard();
+                if (!rows || rows.error) { container.innerHTML = '<div class="empty-state"><p>Failed to load.</p></div>'; return; }
+                if (!rows.length) { container.innerHTML = '<div class="empty-state"><div class="empty-icon">🏆</div><p>No data yet.</p></div>'; return; }
+
+                let html = '<div class="table-wrapper"><table><thead><tr><th>Rank</th><th>Username</th><th>Solved</th><th>Points</th></tr></thead><tbody>';
+                rows.forEach((r, i) => {
+                    const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+                    const medals = ['🥇', '🥈', '🥉'];
+                    const rankDisplay = i < 3 ? medals[i] : `#${i + 1}`;
+                    html += `<tr>
+          <td><span class="leaderboard-rank ${rankClass}">${rankDisplay}</span></td>
+          <td class="lb-username">${escHtml(r.username)}</td>
+          <td class="lb-solved">🎯 ${r.solved_count}</td>
+          <td class="lb-points">⭐ ${r.total_points}</td>
+        </tr>`;
+                });
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state"><p>Error loading leaderboard.</p></div>';
+            }
+        }
+
+        // ── LEADERBOARD VISIBILITY ──
+        function applyLbStatus(isVisible) {
+            const badge = document.getElementById("lb-status-badge");
+            const btn = document.getElementById("lb-toggle-btn");
+            if (isVisible) {
+                badge.textContent = "⬤ VISIBLE";
+                badge.style.cssText = "font-family:var(--font-mono);font-size:0.8rem;padding:3px 12px;border-radius:20px;background:rgba(0,255,100,0.15);color:#00ff64;border:1px solid #00ff64;";
+                btn.textContent = "🔒 Hide from Participants";
+                btn.style.cssText = "min-width:170px;background:rgba(255,150,0,0.15);color:#ffa500;border:1px solid #ffa500;";
+            } else {
+                badge.textContent = "⬤ HIDDEN";
+                badge.style.cssText = "font-family:var(--font-mono);font-size:0.8rem;padding:3px 12px;border-radius:20px;background:rgba(255,50,50,0.13);color:#ff4444;border:1px solid #ff4444;";
+                btn.textContent = "🚀 Release to Participants";
+                btn.style.cssText = "min-width:170px;background:rgba(0,255,100,0.12);color:#00ff64;border:1px solid #00ff64;";
+            }
+        }
+
+        async function loadLeaderboardStatus() {
+            try {
+                const data = await fetch("/admin/settings").then(r => r.json());
+                applyLbStatus(data.leaderboard_visible);
+            } catch (e) { }
+        }
+
+        async function toggleLeaderboardVisibility() {
+            try {
+                const data = await fetch("/admin/settings/leaderboard-visible", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                }).then(r => r.json());
+                applyLbStatus(data.leaderboard_visible);
+                toast(data.message, "success");
+            } catch (e) {
+                toast("Failed to update visibility.", "error");
+            }
+        }
+
+        // ── STATS ──
+        async function loadStats() {
+            try {
+                const [challenges, subs] = await Promise.all([API.adminChallenges(), API.adminSubmissions()]);
+                document.getElementById("stat-challenges").textContent = challenges?.length ?? 0;
+                document.getElementById("stat-submissions").textContent = subs?.length ?? 0;
+                document.getElementById("stat-correct").textContent = subs?.filter(s => s.is_correct).length ?? 0;
+                const teams = [...new Set(subs?.map(s => s.username) ?? [])];
+                document.getElementById("stat-teams").textContent = teams.length;
+            } catch (e) { }
+        }
+
+        loadStats();
+        loadLeaderboardStatus();
+    </script>
+</body>
+
+</html>

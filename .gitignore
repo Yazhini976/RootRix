@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+*.sqlite3
+debug_out.txt
+diagnose_out.txt
+fix_cat_out.txt
+fix_check_out.txt
+fix_out.txt
+inspect_out.txt
+.gemini/
+brain/

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard – RootrixCTF</title>
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a class="navbar-brand" href="/dashboard">
+            <img src="/static/logo.svg" alt="Logo" style="width:36px;height:36px;filter:drop-shadow(0 0 8px #00d4ff);">
+            <span>
+                <span class="logo-text">ROOTRIX CTF</span>
+                <span class="logo-sub">PARTICIPANT PANEL</span>
+            </span>
+        </a>
+        <div class="navbar-right">
+            <div class="nav-user">
+                <span>👤 {{ username }}</span>
+                <span class="role-badge"
+                    style="border-color:var(--accent-green);color:var(--accent-green);background:rgba(0,255,136,0.1);">PLAYER</span>
+            </div>
+            <div class="nav-links">
+                <a class="nav-link" href="/leaderboard">🏆 Leaderboard</a>
+                <button class="btn btn-logout" id="logout-btn">⏻ Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="padding-top:2rem;">
+
+        <!-- PLAYER STATS BAR -->
+        <div class="stats-grid" id="player-stats"
+            style="grid-template-columns:repeat(3,1fr);max-width:600px;margin-bottom:2rem;">
+            <div class="stat-card">
+                <div class="stat-value" id="st-solved" style="color:var(--accent-green);">—</div>
+                <div class="stat-label">Challenges Solved</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="st-points" style="color:var(--accent-yellow);">—</div>
+                <div class="stat-label">Total Points</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="st-total" style="color:var(--accent-cyan);">—</div>
+                <div class="stat-label">Total Challenges</div>
+            </div>
+        </div>
+
+        <!-- CATEGORY FILTER TABS -->
+        <div class="tabs" id="cat-tabs" style="margin-bottom:2rem;">
+            <button class="tab-btn active" data-cat="all">🏁 All</button>
+            <button class="tab-btn" data-cat="welcome" style="color:var(--accent-green);">👋 Welcome</button>
+            <button class="tab-btn" data-cat="web" style="color:var(--cat-web);">🌐 Web</button>
+            <button class="tab-btn" data-cat="forensic" style="color:var(--cat-forensic);">🔬 Forensic</button>
+            <button class="tab-btn" data-cat="osint" style="color:var(--cat-osint);">🕵️ OSINT</button>
+            <button class="tab-btn" data-cat="steg" style="color:var(--cat-steg);">🖼️ Steg</button>
+            <button class="tab-btn" data-cat="crypto" style="color:var(--cat-crypto);">🔐 Crypto</button>
+        </div>
+
+        <!-- CHALLENGES AREA -->
+        <div id="challenges-area">
+            <div class="empty-state">
+                <div class="spinner" style="width:40px;height:40px;margin:auto 0;margin-bottom:1rem;"></div>
+                <p>Loading challenges…</p>
+            </div>
+        </div>
+
+    </div><!-- /container -->
+
+    <script src="/static/app.js"></script>
+    <script>
+        setupLogout();
+
+        const CATEGORIES = ["welcome", "web", "forensic", "osint", "steg", "crypto"];
+        let allChallenges = [];
+        let currentCat = "all";
+
+        // Category tab filter
+        document.querySelectorAll("#cat-tabs .tab-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.querySelectorAll("#cat-tabs .tab-btn").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                currentCat = btn.dataset.cat;
+                renderChallenges();
+            });
+        });
+
+        async function loadChallenges() {
+            try {
+                allChallenges = await API.challenges();
+                if (!allChallenges || allChallenges.error) {
+                    document.getElementById("challenges-area").innerHTML = '<div class="empty-state"><p>Failed to load challenges.</p></div>';
+                    return;
+                }
+                updatePlayerStats();
+                renderChallenges();
+            } catch (e) {
+                document.getElementById("challenges-area").innerHTML = '<div class="empty-state"><p>Error loading challenges.</p></div>';
+            }
+        }
+
+        function updatePlayerStats() {
+            const solved = allChallenges.filter(c => c.user_solved).length;
+            // Use earned_points (dynamic scoring) not fixed c.points
+            const points = allChallenges.filter(c => c.user_solved).reduce((acc, c) => acc + (c.user_earned_points || c.points), 0);
+            document.getElementById("st-solved").textContent = solved;
+            document.getElementById("st-points").textContent = points;
+            document.getElementById("st-total").textContent = allChallenges.length;
+        }
+
+        function renderChallenges() {
+            const area = document.getElementById("challenges-area");
+            const filtered = currentCat === "all" ? allChallenges : allChallenges.filter(c => c.category === currentCat);
+
+            if (!filtered.length) {
+                area.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><p>No challenges in this category yet.</p></div>';
+                return;
+            }
+
+            // Group by category
+            const grouped = {};
+            CATEGORIES.forEach(cat => { grouped[cat] = []; });
+            filtered.forEach(c => {
+                if (grouped[c.category]) grouped[c.category].push(c);
+                else grouped[c.category] = [c];
+            });
+
+            let html = "";
+            const catsToShow = currentCat === "all" ? CATEGORIES : [currentCat];
+            catsToShow.forEach(cat => {
+                const chals = grouped[cat] || [];
+                if (!chals.length) return;
+                html += `
+        <div class="category-section fade-in">
+          <div class="category-header">
+            <span class="category-icon">${categoryIcon(cat)}</span>
+            <span class="category-title" style="color:${categoryColor(cat)};">${cat.toUpperCase()}</span>
+            <span class="category-count">${chals.length} challenge${chals.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div class="challenges-grid">
+            ${chals.map(c => renderCard(c)).join("")}
+          </div>
+        </div>`;
+            });
+
+            area.innerHTML = html;
+
+            // Attach flag submit handlers
+            document.querySelectorAll(".flag-submit-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const id = btn.dataset.id;
+                    const input = document.getElementById(`flag-input-${id}`);
+                    submitFlag(id, input);
+                });
+            });
+
+            document.querySelectorAll(".flag-input").forEach(input => {
+                input.addEventListener("keydown", e => {
+                    if (e.key === "Enter") {
+                        const id = input.dataset.id;
+                        submitFlag(id, input);
+                    }
+                });
+            });
+        }
+
+        function renderCard(c) {
+            const solved = c.user_solved;
+            let resourceHtml = "";
+            if (c.resource_type === "link" && c.resource_path) {
+                resourceHtml = `<div class="challenge-resource">
+        <a class="resource-link" href="${escHtml(c.resource_path)}" target="_blank" rel="noopener">🔗 Open Challenge Site</a>
+      </div>`;
+            } else if (c.resource_type === "file" && c.resource_path) {
+                const ext = c.resource_path.split('.').pop().toUpperCase();
+                resourceHtml = `<div class="challenge-resource">
+        <a class="resource-link" href="${escHtml(c.resource_path)}" target="_blank" download>📁 Download File (${ext})</a>
+      </div>`;
+            }
+
+            const flagFormHtml = solved
+                ? `<div class="flag-result correct">✅ You solved this! +${c.points} pts</div>`
+                : `<div class="flag-form">
+           <input class="flag-input" id="flag-input-${c.id}" data-id="${c.id}" type="text" placeholder="flag{...}" />
+           <button class="flag-submit-btn" data-id="${c.id}">Submit</button>
+         </div>
+         <div class="flag-result" id="flag-result-${c.id}"></div>`;
+
+            return `<div class="challenge-card ${solved ? 'solved' : ''}" id="card-${c.id}">
+      <div class="challenge-card-header">
+        <span class="challenge-title">${escHtml(c.title)}</span>
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+          ${solved ? `<span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-green);background:rgba(0,255,136,0.12);border:1px solid rgba(0,255,136,0.35);border-radius:4px;padding:0.15rem 0.45rem;letter-spacing:1px;">✅ SOLVED</span>` : ''}
+          <span class="challenge-points">🏅 ${c.points}pts</span>
+        </div>
+      </div>
+      <p class="challenge-desc">${escHtml(c.description || 'No description provided.')}</p>
+      ${resourceHtml}
+      <div class="solved-meta">👥 Solved by <span id="solved-count-${c.id}">${c.solved_count}</span> team${c.solved_count !== 1 ? 's' : ''}</div>
+      ${flagFormHtml}
+    </div>`;
+        }
+
+        async function submitFlag(challengeId, inputEl) {
+            const submitted_flag = inputEl.value.trim();
+            if (!submitted_flag) return;
+
+            const resultEl = document.getElementById(`flag-result-${challengeId}`);
+            const btn = document.querySelector(`.flag-submit-btn[data-id="${challengeId}"]`);
+
+            if (btn) btn.disabled = true;
+            if (resultEl) { resultEl.className = "flag-result"; resultEl.textContent = "Checking…"; }
+
+            try {
+                const res = await API.submitFlag({ challenge_id: challengeId, submitted_flag });
+                if (resultEl) {
+                    resultEl.className = `flag-result ${res.correct ? 'correct' : 'wrong'}`;
+                    resultEl.textContent = res.message;
+                }
+                // Update solved count
+                const countEl = document.getElementById(`solved-count-${challengeId}`);
+                if (countEl) countEl.textContent = res.solved_count;
+
+                if (res.correct) {
+                    // Reload to update card to solved state
+                    setTimeout(() => loadChallenges(), 1000);
+                }
+            } catch (e) {
+                if (resultEl) { resultEl.className = "flag-result wrong"; resultEl.textContent = "❌ Error submitting flag."; }
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        loadChallenges();
+    </script>
+</body>
+
+</html>
